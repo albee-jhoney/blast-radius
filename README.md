@@ -114,6 +114,68 @@ You can read more details in the [documentation](doc/embedded.md)
 [hcl2json](https://github.com/tmccombs/hcl2json) to parse [Terraform][] configuration,
 and [d3.js](https://d3js.org/) to implement interactive features and animations.
 
+## Docker
+
+To launch *Blast Radius* for a local directory by manually running:
+
+* create a dockerhub account
+```sh
+docker build -t <dockerhub_username>/blast-radius:v1 .
+```
+
+```sh
+docker push <dockerhub_username>/blast-radius:v1
+
+```
+
+```sh
+docker run --cap-add=SYS_ADMIN -dit -p 5000:5000 -v <pathofdirectory>:/data:ro <dockerhub_username>/blast-radius:v1
+```
+
+### Docker configurations
+
+*Terraform* module links are saved as _absolute_ paths in relative to the
+project root (note `.terraform/modules/<uuid>`). Given these paths will vary
+betwen Docker and the host, we mount the volume as read-only, assuring we don't
+ever interfere with your real environment.
+
+However, in order for *Blast Radius* to actually work with *Terraform*, it needs
+to be initialized as well as planned compulsory. To accomplish this, the container creates an [overlayfs][]
+that exists within the container, overlaying your own, so that it can operate
+independently. To do this, certain runtime privileges are required --
+specifically `--cap-add=SYS_ADMIN`.
+
+
+#### Docker & Subdirectories
+
+If you organized your *Terraform* project using stacks and modules,
+*Blast Radius* must be called from the project root and reference them as
+subdirectories -- don't forget to prefix `--serve`!
+
+For example, let's create a Terraform `project` with the following:
+
+```txt
+$ tree -d
+`-- project/
+    |-- modules/
+    |   |-- foo
+    |   |-- bar
+    |   `-- dead
+    `-- stacks/
+        `-- beef/
+             `-- .terraform
+```
+
+It consists of 3 modules `foo`, `bar` and `dead`, followed by one `beef` stack.
+To apply *Blast Radius* to the `beef` stack, you would want to run the container
+with the following:
+
+```sh
+$ cd project
+$ docker run --cap-add=SYS_ADMIN -dit  -p 5000:5000 -v <pathofdirectory>:/data:ro <dockerhub_username>/blast-radius:v1
+```
+
+
 ## Further Reading
 
 The development of *Blast Radius* is documented in a series of
